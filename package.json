@@ -1,0 +1,32 @@
+{
+  "name": "watercooler",
+  "version": "0.1.0",
+  "description": "Local-first knowledge and coordination layer for AI coding agents via MCP",
+  "bin": {
+    "watercooler": "dist/cli/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "better-sqlite3": "^11.6.0",
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

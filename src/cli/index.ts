@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+
+/**
+ * Watercooler CLI
+ * Local-first knowledge and coordination for AI coding agents
+ */
+
+import { Command } from 'commander';
+import { serveCommand } from './commands/serve.js';
+import { publishCommand } from './commands/publish.js';
+import { searchCommand } from './commands/search.js';
+
+const program = new Command();
+
+program
+  .name('watercooler')
+  .description('Local-first knowledge and coordination layer for AI coding agents')
+  .version('0.1.0');
+
+program
+  .command('serve')
+  .description('Start Watercooler MCP server (stdio)')
+  .action(serveCommand);
+
+program
+  .command('publish')
+  .description('Publish a nugget')
+  .requiredOption('-t, --type <type>', 'Nugget type: tip, gotcha, pattern, snippet, idea, win, link')
+  .requiredOption('-b, --body <body>', 'Content of the nugget')
+  .option('--tags <tags>', 'Comma-separated tags')
+  .action((options) => publishCommand(options));
+
+program
+  .command('search [query]')
+  .description('Full-text search nuggets')
+  .option('-n, --limit <n>', 'Max results (default 20)', '20')
+  .action((query, options) => searchCommand(query ?? '', options));
+
+program.parse();
