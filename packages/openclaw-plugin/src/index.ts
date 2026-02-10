@@ -12,25 +12,37 @@ async function connect(api: any): Promise<Client> {
     command: "npx",
     args: ["@true-and-useful/watercooler", "serve"]
   });
+
   const client = new Client(
-    { name: "openclaw-watercooler", version: "0.1.0" },
+    { name: "openclaw-watercooler", version: "0.2.0" },
     { capabilities: {} }
   );
+
   await client.connect(transport);
   api.log?.info?.("Connected to Watercooler MCP server");
   return client;
 }
 
 async function ensureConnected(api: any): Promise<Client> {
-  if (mcpClient) return mcpClient;
+  if (mcpClient) {
+    return mcpClient;
+  }
+
   if (isConnecting) {
-    while (isConnecting) await new Promise((r) => setTimeout(r, 100));
+    while (isConnecting) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
     if (mcpClient) return mcpClient;
   }
+
   isConnecting = true;
+
   try {
     mcpClient = await connect(api);
     return mcpClient;
+  } catch (error) {
+    api.log?.error?.(`Failed to connect to Watercooler MCP server: ${error}`);
+    throw error;
   } finally {
     isConnecting = false;
   }
@@ -41,7 +53,7 @@ async function callWithReconnect(api: any, fn: (client: Client) => Promise<any>)
     const client = await ensureConnected(api);
     return await fn(client);
   } catch (error: any) {
-    if (error?.message?.includes("Not connected") || error?.message?.includes("closed")) {
+    if (error?.message?.includes('Not connected') || error?.message?.includes('closed')) {
       api.log?.warn?.("Connection lost, reconnecting...");
       mcpClient = null;
       const client = await ensureConnected(api);
@@ -51,15 +63,8 @@ async function callWithReconnect(api: any, fn: (client: Client) => Promise<any>)
   }
 }
 
-function forward(name: string, args: Record<string, unknown>) {
-  return (api: any) =>
-    callWithReconnect(api, async (client) => {
-      const result = await client.callTool({ name, arguments: args });
-      return { content: result.content };
-    });
-}
+export default function(api: any) {
 
-export default function (api: any) {
   api.registerTool({
     name: "watercooler_publish",
     description: "Publish a nugget (tip, gotcha, pattern, snippet, idea, win, link).",
@@ -70,19 +75,31 @@ export default function (api: any) {
       author: Type.Optional(Type.String())
     }),
     async execute(_id: string, params: any) {
-      return forward("publish", { type: params.type, body: params.body, tags: params.tags, author: params.author })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "publish",
+          arguments: { type: params.type, body: params.body, tags: params.tags, author: params.author }
+        });
+        return { content: result.content };
+      });
     }
   });
 
   api.registerTool({
     name: "watercooler_search",
-    description: "Full-text search nuggets.",
+    description: "Full-text search nuggets. Returns ranked results.",
     parameters: Type.Object({
       query: Type.String(),
       limit: Type.Optional(Type.Number())
     }),
     async execute(_id: string, params: any) {
-      return forward("search", { query: params.query, limit: params.limit })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "search",
+          arguments: { query: params.query, limit: params.limit }
+        });
+        return { content: result.content };
+      });
     }
   });
 
@@ -91,7 +108,13 @@ export default function (api: any) {
     description: "Get last seen event id for this viewer.",
     parameters: Type.Object({ viewer_id: Type.Optional(Type.String()) }),
     async execute(_id: string, params: any) {
-      return forward("get_cursor", { viewer_id: params.viewer_id })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "get_cursor",
+          arguments: { viewer_id: params.viewer_id }
+        });
+        return { content: result.content };
+      });
     }
   });
 
@@ -99,11 +122,17 @@ export default function (api: any) {
     name: "watercooler_set_cursor",
     description: "Mark events as seen.",
     parameters: Type.Object({
-      viewer_id: Type.Optional(Type.String()),
-      event_id: Type.Number()
+      event_id: Type.Number(),
+      viewer_id: Type.Optional(Type.String())
     }),
     async execute(_id: string, params: any) {
-      return forward("set_cursor", { viewer_id: params.viewer_id, event_id: params.event_id })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "set_cursor",
+          arguments: { event_id: params.event_id, viewer_id: params.viewer_id }
+        });
+        return { content: result.content };
+      });
     }
   });
 
@@ -112,7 +141,13 @@ export default function (api: any) {
     description: "Get new_events and new_nuggets since viewer's cursor.",
     parameters: Type.Object({ viewer_id: Type.Optional(Type.String()) }),
     async execute(_id: string, params: any) {
-      return forward("counts", { viewer_id: params.viewer_id })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "counts",
+          arguments: { viewer_id: params.viewer_id }
+        });
+        return { content: result.content };
+      });
     }
   });
 
@@ -124,7 +159,13 @@ export default function (api: any) {
       reaction: Type.String({ description: "up | down | bookmark" })
     }),
     async execute(_id: string, params: any) {
-      return forward("react", { nugget_id: params.nugget_id, reaction: params.reaction })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "react",
+          arguments: { nugget_id: params.nugget_id, reaction: params.reaction }
+        });
+        return { content: result.content };
+      });
     }
   });
 
@@ -133,7 +174,13 @@ export default function (api: any) {
     description: "Mark that you used this nugget.",
     parameters: Type.Object({ nugget_id: Type.Number() }),
     async execute(_id: string, params: any) {
-      return forward("mark_applied", { nugget_id: params.nugget_id })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "mark_applied",
+          arguments: { nugget_id: params.nugget_id }
+        });
+        return { content: result.content };
+      });
     }
   });
 
@@ -145,7 +192,13 @@ export default function (api: any) {
       limit: Type.Optional(Type.Number())
     }),
     async execute(_id: string, params: any) {
-      return forward("view", { name: params.name, limit: params.limit })(api);
+      return await callWithReconnect(api, async (client) => {
+        const result = await client.callTool({
+          name: "view",
+          arguments: { name: params.name, limit: params.limit }
+        });
+        return { content: result.content };
+      });
     }
   });
 

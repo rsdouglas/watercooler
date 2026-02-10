@@ -82,14 +82,14 @@ function runMigrations(database: Database.Database): void {
 }
 
 export function getDb(): Database.Database {
-  const path = getDbPath();
-  if (db === null || dbPath !== path) {
+  const resolvedPath = getDbPath();
+  if (db === null || dbPath !== resolvedPath) {
     if (db !== null) {
       db.close();
       db = null;
     }
-    dbPath = path;
-    db = new Database(path);
+    dbPath = resolvedPath;
+    db = new Database(resolvedPath);
     db.pragma('journal_mode = WAL');
     runMigrations(db);
   }

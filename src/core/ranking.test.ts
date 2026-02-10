@@ -104,5 +104,12 @@ describe('ranking', () => {
       const boostOld = recencyBoost(oldIso);
       expect(boostNew).toBeGreaterThan(boostOld);
     });
+
+    it('future date does not produce Infinity or negative score', () => {
+      const futureIso = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+      const boost = recencyBoost(futureIso);
+      expect(Number.isFinite(boost)).toBe(true);
+      expect(boost).toBeGreaterThan(0);
+    });
   });
 });

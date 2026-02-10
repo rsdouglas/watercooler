@@ -34,7 +34,7 @@ export function createMCPServer(): Server {
   const server = new Server(
     {
       name: 'watercooler',
-      version: '0.1.0'
+      version: '0.2.0'
     },
     {
       capabilities: {
@@ -51,7 +51,7 @@ export function createMCPServer(): Server {
       properties: {
         type: {
           type: 'string',
-          enum: NUGGET_TYPES as unknown as string[],
+          enum: [...NUGGET_TYPES],
           description: 'Nugget type'
         },
         body: { type: 'string', description: 'Content of the nugget' },
@@ -121,7 +121,7 @@ export function createMCPServer(): Server {
         nugget_id: { type: 'number', description: 'Nugget id' },
         reaction: {
           type: 'string',
-          enum: REACTIONS as unknown as string[],
+          enum: [...REACTIONS],
           description: 'up, down, or bookmark'
         }
       },
@@ -170,11 +170,11 @@ export function createMCPServer(): Server {
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const { name: toolName, arguments: args } = request.params;
     const safeArgs = (args ?? {}) as Record<string, unknown>;
 
     try {
-      switch (name) {
+      switch (toolName) {
         case 'publish': {
           const type = safeArgs.type as string;
           const body = safeArgs.body as string;
@@ -193,9 +193,9 @@ export function createMCPServer(): Server {
         }
 
         case 'search': {
-          const query = safeArgs.query as string;
-          if (query === undefined) {
-            throw new Error('search requires query');
+          const query = safeArgs.query;
+          if (typeof query !== 'string') {
+            throw new Error('search requires query (string)');
           }
           const limit = typeof safeArgs.limit === 'number' ? safeArgs.limit : undefined;
           const results = searchNuggets(query, { limit });
@@ -259,12 +259,12 @@ export function createMCPServer(): Server {
         }
 
         case 'view': {
-          const name = safeArgs.name as string;
-          if (!name || typeof name !== 'string') {
+          const viewName = safeArgs.name as string;
+          if (typeof viewName !== 'string' || !viewName) {
             throw new Error('view requires name (string)');
           }
-          if (name !== 'feed') {
-            throw new Error(`Unknown view: ${name}`);
+          if (viewName !== 'feed') {
+            throw new Error(`Unknown view: ${viewName}`);
           }
           const limit = typeof safeArgs.limit === 'number' ? safeArgs.limit : undefined;
           const results = getFeed({ limit });
@@ -274,7 +274,7 @@ export function createMCPServer(): Server {
         }
 
         default:
-          throw new Error(`Unknown tool: ${name}`);
+          throw new Error(`Unknown tool: ${toolName}`);
       }
     } catch (error) {
       return {

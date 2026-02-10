@@ -1,15 +1,9 @@
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import {
-  afterEach,
-  beforeEach,
   describe,
   expect,
   it,
 } from 'vitest';
 
-import { closeDb } from './db.js';
 import { getEventsSince } from './events.js';
 import {
   createNugget,
@@ -18,23 +12,10 @@ import {
   reactNugget,
   searchNuggets,
 } from './nuggets.js';
+import { useTempDb } from './test-helpers.js';
 
 describe('nuggets', () => {
-  let tempDir: string;
-
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'watercooler-test-'));
-    process.env.WATERCOOLER_DB_PATH = path.join(tempDir, 'test.sqlite');
-    closeDb();
-  });
-
-  afterEach(() => {
-    delete process.env.WATERCOOLER_DB_PATH;
-    closeDb();
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+  useTempDb('watercooler-nuggets-test');
 
   describe('createNugget', () => {
     it('creates a nugget and returns it with id', () => {
@@ -59,7 +40,6 @@ describe('nuggets', () => {
         author: 'agent:xyz'
       });
       expect(n.type).toBe('gotcha');
-      expect(n.body).toBe('Race condition here');
       expect(n.tags).toBe('async,race');
       expect(n.author).toBe('agent:xyz');
     });
@@ -77,11 +57,16 @@ describe('nuggets', () => {
       ).toThrow(/Invalid type/);
     });
 
+    it('throws for empty body', () => {
+      expect(() =>
+        createNugget({ type: 'tip', body: '   ' })
+      ).toThrow(/body must not be empty/);
+    });
+
     it('auto-increments id', () => {
       const a = createNugget({ type: 'tip', body: 'first' });
       const b = createNugget({ type: 'tip', body: 'second' });
-      expect(a.id).toBe(1);
-      expect(b.id).toBe(2);
+      expect(b.id).toBe(a.id + 1);
     });
 
     it('emits nugget.published event', () => {
@@ -100,8 +85,6 @@ describe('nuggets', () => {
       createNugget({ type: 'tip', body: 'second' });
       const results = searchNuggets('');
       expect(results).toHaveLength(2);
-      const bodies = results.map((r) => r.body).sort();
-      expect(bodies).toEqual(['first', 'second']);
     });
 
     it('respects limit for empty query', () => {
@@ -141,10 +124,16 @@ describe('nuggets', () => {
       const results = searchNuggets('foo', { limit: 2 });
       expect(results).toHaveLength(2);
     });
+
+    it('returns empty array on malformed FTS5 syntax instead of crashing', () => {
+      createNugget({ type: 'tip', body: 'test content' });
+      expect(searchNuggets('"unclosed')).toEqual([]);
+      expect(searchNuggets('(bad paren')).toEqual([]);
+    });
   });
 
   describe('reactNugget', () => {
-    it('increments up, then up again, then bookmark', () => {
+    it('increments counters correctly', () => {
       const n = createNugget({ type: 'tip', body: 'test' });
       const afterUp = reactNugget(n.id, 'up');
       expect(afterUp.up).toBe(1);

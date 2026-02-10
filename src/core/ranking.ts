@@ -23,13 +23,18 @@ export interface ScoreRow {
 }
 
 function parseCreatedAt(created_at: string): Date {
-  return new Date(created_at);
+  // SQLite stores YYYY-MM-DD HH:MM:SS (no tz) — treat as UTC
+  let s = created_at.includes('T') ? created_at : created_at.replace(' ', 'T');
+  if (!s.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(s)) {
+    s += 'Z';
+  }
+  return new Date(s);
 }
 
 export function recencyBoost(created_at: string, weights: RankingWeights = DEFAULT_WEIGHTS): number {
   const created = parseCreatedAt(created_at);
   const now = Date.now();
-  const daysSince = (now - created.getTime()) / (24 * 60 * 60 * 1000);
+  const daysSince = Math.max(0, (now - created.getTime()) / (24 * 60 * 60 * 1000));
   return weights.recency_scale / (1 + daysSince);
 }
 

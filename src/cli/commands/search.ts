@@ -6,6 +6,6 @@ export async function searchCommand(query: string, options: { limit?: string }):
     console.error('--limit must be a positive number');
     process.exit(1);
   }
-  const results = searchNuggets(query ?? '', { limit });
+  const results = searchNuggets(query, { limit });
   console.log(JSON.stringify(results, null, 2));
 }

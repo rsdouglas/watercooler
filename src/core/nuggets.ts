@@ -74,7 +74,10 @@ export function createNugget(input: CreateNuggetInput): NuggetRow {
   if (!NUGGET_TYPES.includes(input.type)) {
     throw new Error(`Invalid type: ${input.type}. Must be one of: ${NUGGET_TYPES.join(', ')}`);
   }
-  const body = redactBody(input.body.trim(), 'strict');
+  const body = redactBody(input.body.trim());
+  if (!body) {
+    throw new Error('body must not be empty');
+  }
   const stmt = database.prepare(`
     INSERT INTO nuggets (type, body, tags, author)
     VALUES (?, ?, ?, ?)
@@ -101,12 +104,20 @@ export function searchNuggets(query: string, opts: SearchNuggetsOptions = {}): N
     `);
     return stmt.all(limit) as NuggetRow[];
   }
-  const stmt = database.prepare(`
-    SELECT n.* FROM nuggets n
-    INNER JOIN nuggets_fts ON nuggets_fts.rowid = n.id
-    WHERE nuggets_fts MATCH ?
-    ORDER BY nuggets_fts.rank
-    LIMIT ?
-  `);
-  return stmt.all(trimmed, limit) as NuggetRow[];
+  try {
+    const stmt = database.prepare(`
+      SELECT n.* FROM nuggets n
+      INNER JOIN nuggets_fts ON nuggets_fts.rowid = n.id
+      WHERE nuggets_fts MATCH ?
+      ORDER BY nuggets_fts.rank
+      LIMIT ?
+    `);
+    return stmt.all(trimmed, limit) as NuggetRow[];
+  } catch (err: any) {
+    // FTS5 syntax error on malformed query — fall back to empty results
+    if (err?.code === 'SQLITE_ERROR') {
+      return [];
+    }
+    throw err;
+  }
 }

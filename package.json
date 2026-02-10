@@ -11,11 +11,12 @@
   "bin": {
     "watercooler": "dist/cli/index.js"
   },
-  "files": ["dist"],
+  "files": ["dist", "SKILL.md", "scripts/postinstall.js"],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/cli/index.js",
+    "postinstall": "node scripts/postinstall.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -30,6 +31,8 @@
     "typescript": "^5.3.3",
     "vitest": "^3.2.4"
   },
+  "author": "True and Useful LLC",
+  "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   }

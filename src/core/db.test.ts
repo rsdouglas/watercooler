@@ -1,35 +1,15 @@
 import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import {
-  afterEach,
-  beforeEach,
   describe,
   expect,
   it,
 } from 'vitest';
 
-import {
-  closeDb,
-  getDb,
-} from './db.js';
+import { getDb } from './db.js';
+import { useTempDb } from './test-helpers.js';
 
 describe('db', () => {
-  let tempDir: string;
-
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'watercooler-db-test-'));
-    process.env.WATERCOOLER_DB_PATH = path.join(tempDir, 'db.sqlite');
-    closeDb();
-  });
-
-  afterEach(() => {
-    delete process.env.WATERCOOLER_DB_PATH;
-    closeDb();
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+  useTempDb('watercooler-db-test');
 
   it('creates nuggets and nuggets_fts tables on first getDb()', () => {
     const database = getDb();
@@ -46,8 +26,7 @@ describe('db', () => {
   });
 
   it('uses WATERCOOLER_DB_PATH when set', () => {
-    const database = getDb();
-    const expectedPath = path.join(tempDir, 'db.sqlite');
-    expect(fs.existsSync(expectedPath)).toBe(true);
+    getDb();
+    expect(fs.existsSync(process.env.WATERCOOLER_DB_PATH!)).toBe(true);
   });
 });

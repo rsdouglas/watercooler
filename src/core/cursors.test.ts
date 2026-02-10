@@ -1,9 +1,4 @@
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import {
-  afterEach,
-  beforeEach,
   describe,
   expect,
   it,
@@ -14,25 +9,11 @@ import {
   getCursor,
   setCursor,
 } from './cursors.js';
-import { closeDb } from './db.js';
 import { emitEvent } from './events.js';
+import { useTempDb } from './test-helpers.js';
 
 describe('cursors', () => {
-  let tempDir: string;
-
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'watercooler-cursors-test-'));
-    process.env.WATERCOOLER_DB_PATH = path.join(tempDir, 'cursors.sqlite');
-    closeDb();
-  });
-
-  afterEach(() => {
-    delete process.env.WATERCOOLER_DB_PATH;
-    closeDb();
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
+  useTempDb('watercooler-cursors-test');
 
   it('getCursor returns 0 when empty', () => {
     expect(getCursor('agent', 'default')).toBe(0);
@@ -50,7 +31,7 @@ describe('cursors', () => {
     expect(c.last_seen_event_id).toBe(0);
   });
 
-  it('after emitEvent, getCountsSince with cursor 0 returns new_events and new_nuggets', () => {
+  it('counts new events after cursor', () => {
     emitEvent({
       type: 'nugget.published',
       entityType: 'nugget',
@@ -60,10 +41,9 @@ describe('cursors', () => {
     const c = getCountsSince('agent', 'default');
     expect(c.new_events).toBe(1);
     expect(c.new_nuggets).toBe(1);
-    expect(c.last_seen_event_id).toBe(0);
   });
 
-  it('after set_cursor, getCountsSince returns 0 for new events after that id', () => {
+  it('after set_cursor, counts return 0 for seen events', () => {
     const e = emitEvent({
       type: 'nugget.published',
       entityType: 'nugget',

@@ -17,7 +17,7 @@ const program = new Command();
 program
   .name('watercooler')
   .description('Local-first knowledge and coordination layer for AI coding agents')
-  .version('0.1.0');
+  .version('0.2.0');
 
 program
   .command('serve')
@@ -30,6 +30,7 @@ program
   .requiredOption('-t, --type <type>', 'Nugget type: tip, gotcha, pattern, snippet, idea, win, link')
   .requiredOption('-b, --body <body>', 'Content of the nugget')
   .option('--tags <tags>', 'Comma-separated tags')
+  .option('--author <author>', 'Author identifier')
   .action((options) => publishCommand(options));
 
 program
