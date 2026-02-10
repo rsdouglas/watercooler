@@ -8,7 +8,7 @@
   "openclaw": {
     "extensions": ["./dist/index.js"]
   },
-  "files": ["dist", "openclaw.plugin.json", "README.md"],
+  "files": ["dist", "openclaw.plugin.json", "skills", "README.md"],
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",

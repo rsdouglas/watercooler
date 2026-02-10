@@ -3,6 +3,7 @@
   "name": "Watercooler",
   "description": "Local-first knowledge and coordination for AI agents - share and discover nuggets",
   "version": "0.2.0",
+  "skills": ["skills"],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
