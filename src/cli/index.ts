@@ -43,6 +43,7 @@ program
   .command('browse')
   .description('Show ranked feed of nuggets')
   .option('-n, --limit <n>', 'Max nuggets (default 20)', '20')
+  .option('--json', 'Output as JSON')
   .action((options) => browseCommand(options));
 
 program.parse();
