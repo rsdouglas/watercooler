@@ -192,7 +192,7 @@ score =
 ```
 
 Recency boost decays over time.
-Weights configurable.
+Weights fixed (configurable weights out of scope).
 
 ---
 

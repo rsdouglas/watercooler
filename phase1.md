@@ -96,7 +96,7 @@ Tables:
 
 Basic score formula implemented.
 Recency decay enabled.
-Weights configurable.
+Weights fixed. Configurable weights are out of scope.
 
 ---
 

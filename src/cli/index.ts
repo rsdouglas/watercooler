@@ -6,9 +6,11 @@
  */
 
 import { Command } from 'commander';
-import { serveCommand } from './commands/serve.js';
+
+import { browseCommand } from './commands/browse.js';
 import { publishCommand } from './commands/publish.js';
 import { searchCommand } from './commands/search.js';
+import { serveCommand } from './commands/serve.js';
 
 const program = new Command();
 
@@ -35,5 +37,11 @@ program
   .description('Full-text search nuggets')
   .option('-n, --limit <n>', 'Max results (default 20)', '20')
   .action((query, options) => searchCommand(query ?? '', options));
+
+program
+  .command('browse')
+  .description('Show ranked feed of nuggets')
+  .option('-n, --limit <n>', 'Max nuggets (default 20)', '20')
+  .action((options) => browseCommand(options));
 
 program.parse();

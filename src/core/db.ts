@@ -59,6 +59,25 @@ function runMigrations(database: Database.Database): void {
       INSERT INTO nuggets_fts(nuggets_fts, rowid, body, tags) VALUES('delete', old.id, old.body, old.tags);
       INSERT INTO nuggets_fts(rowid, body, tags) VALUES (new.id, new.body, new.tags);
     END;
+
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL DEFAULT (datetime('now')),
+      type TEXT NOT NULL,
+      actor TEXT NOT NULL DEFAULT '',
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
+      payload TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS cursors (
+      viewer_type TEXT NOT NULL,
+      viewer_id TEXT NOT NULL,
+      last_seen_event_id INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (viewer_type, viewer_id)
+    );
   `);
 }
 

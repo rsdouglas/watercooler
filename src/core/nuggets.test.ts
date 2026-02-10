@@ -10,9 +10,12 @@ import {
 } from 'vitest';
 
 import { closeDb } from './db.js';
+import { getEventsSince } from './events.js';
 import {
   createNugget,
+  markNuggetApplied,
   NUGGET_TYPES,
+  reactNugget,
   searchNuggets,
 } from './nuggets.js';
 
@@ -80,6 +83,15 @@ describe('nuggets', () => {
       expect(a.id).toBe(1);
       expect(b.id).toBe(2);
     });
+
+    it('emits nugget.published event', () => {
+      const n = createNugget({ type: 'pattern', body: 'Retry with backoff' });
+      const events = getEventsSince(0, 10);
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe('nugget.published');
+      expect(events[0].entity_type).toBe('nugget');
+      expect(events[0].entity_id).toBe(n.id);
+    });
   });
 
   describe('searchNuggets', () => {
@@ -128,6 +140,38 @@ describe('nuggets', () => {
       createNugget({ type: 'tip', body: 'foo qux' });
       const results = searchNuggets('foo', { limit: 2 });
       expect(results).toHaveLength(2);
+    });
+  });
+
+  describe('reactNugget', () => {
+    it('increments up, then up again, then bookmark', () => {
+      const n = createNugget({ type: 'tip', body: 'test' });
+      const afterUp = reactNugget(n.id, 'up');
+      expect(afterUp.up).toBe(1);
+      expect(afterUp.down).toBe(0);
+      expect(afterUp.bookmarks).toBe(0);
+      const afterUp2 = reactNugget(n.id, 'up');
+      expect(afterUp2.up).toBe(2);
+      const afterBookmark = reactNugget(n.id, 'bookmark');
+      expect(afterBookmark.bookmarks).toBe(1);
+    });
+
+    it('throws for non-existent nugget id', () => {
+      expect(() => reactNugget(99999, 'up')).toThrow(/Nugget not found/);
+    });
+  });
+
+  describe('markNuggetApplied', () => {
+    it('increments applied', () => {
+      const n = createNugget({ type: 'tip', body: 'test' });
+      const a1 = markNuggetApplied(n.id);
+      expect(a1.applied).toBe(1);
+      const a2 = markNuggetApplied(n.id);
+      expect(a2.applied).toBe(2);
+    });
+
+    it('throws for non-existent nugget id', () => {
+      expect(() => markNuggetApplied(99999)).toThrow(/Nugget not found/);
     });
   });
 });

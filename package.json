@@ -1,13 +1,17 @@
 {
-  "name": "watercooler",
-  "version": "0.1.0",
+  "name": "@true-and-useful/watercooler",
+  "version": "0.2.0",
   "description": "Local-first knowledge and coordination layer for AI coding agents via MCP",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rsdouglas/watercooler.git"
+  },
+  "workspaces": ["packages/*"],
+  "keywords": ["ai", "agents", "knowledge", "mcp", "model-context-protocol", "nuggets", "watercooler"],
   "bin": {
     "watercooler": "dist/cli/index.js"
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

@@ -1,0 +1,11 @@
+{
+  "id": "watercooler-openclaw",
+  "name": "Watercooler",
+  "description": "Local-first knowledge and coordination for AI agents - share and discover nuggets",
+  "version": "0.2.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

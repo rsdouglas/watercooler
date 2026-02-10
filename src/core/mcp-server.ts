@@ -4,13 +4,31 @@
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  StdioServerTransport,
+} from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-  Tool
+  Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import { createNugget, searchNuggets, NUGGET_TYPES, type NuggetType } from './nuggets.js';
+
+import {
+  getCountsSince,
+  getCursor,
+  setCursor,
+} from './cursors.js';
+import {
+  createNugget,
+  markNuggetApplied,
+  NUGGET_TYPES,
+  type NuggetType,
+  type Reaction,
+  REACTIONS,
+  reactNugget,
+  searchNuggets,
+} from './nuggets.js';
+import { getFeed } from './views.js';
 
 export function createMCPServer(): Server {
   const server = new Server(
@@ -57,8 +75,98 @@ export function createMCPServer(): Server {
     }
   };
 
+  const getCursorTool: Tool = {
+    name: 'get_cursor',
+    description: "Get this viewer's last seen event id (for unread/counts).",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        viewer_id: { type: 'string', description: 'Viewer id (default "default")' }
+      },
+      required: []
+    }
+  };
+
+  const setCursorTool: Tool = {
+    name: 'set_cursor',
+    description: 'Mark events as seen by setting last seen event id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        viewer_id: { type: 'string', description: 'Viewer id (default "default")' },
+        event_id: { type: 'number', description: 'Last seen event id' }
+      },
+      required: ['event_id']
+    }
+  };
+
+  const countsTool: Tool = {
+    name: 'counts',
+    description: 'Get new_events and new_nuggets since this viewer\'s cursor.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        viewer_id: { type: 'string', description: 'Viewer id (default "default")' }
+      },
+      required: []
+    }
+  };
+
+  const reactTool: Tool = {
+    name: 'react',
+    description: 'Upvote, downvote, or bookmark a nugget.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        nugget_id: { type: 'number', description: 'Nugget id' },
+        reaction: {
+          type: 'string',
+          enum: REACTIONS as unknown as string[],
+          description: 'up, down, or bookmark'
+        }
+      },
+      required: ['nugget_id', 'reaction']
+    }
+  };
+
+  const markAppliedTool: Tool = {
+    name: 'mark_applied',
+    description: 'Mark that you used this nugget (high signal for ranking).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        nugget_id: { type: 'number', description: 'Nugget id' }
+      },
+      required: ['nugget_id']
+    }
+  };
+
+  const viewTool: Tool = {
+    name: 'view',
+    description: 'Get a named view (e.g. feed: nuggets ordered by ranking).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'View name (e.g. "feed")' },
+        limit: { type: 'number', description: 'Max results (default 20, max 100)' }
+      },
+      required: ['name']
+    }
+  };
+
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return { tools: [publishTool, searchTool] };
+    return {
+      tools: [
+        publishTool,
+        searchTool,
+        getCursorTool,
+        setCursorTool,
+        countsTool,
+        reactTool,
+        markAppliedTool,
+        viewTool
+      ]
+    };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -91,6 +199,75 @@ export function createMCPServer(): Server {
           }
           const limit = typeof safeArgs.limit === 'number' ? safeArgs.limit : undefined;
           const results = searchNuggets(query, { limit });
+          return {
+            content: [{ type: 'text', text: JSON.stringify(results, null, 2) }]
+          };
+        }
+
+        case 'get_cursor': {
+          const viewerId = typeof safeArgs.viewer_id === 'string' ? safeArgs.viewer_id : 'default';
+          const last_seen_event_id = getCursor('agent', viewerId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ last_seen_event_id }, null, 2) }]
+          };
+        }
+
+        case 'set_cursor': {
+          const viewerId = typeof safeArgs.viewer_id === 'string' ? safeArgs.viewer_id : 'default';
+          const eventId = safeArgs.event_id as number;
+          if (typeof eventId !== 'number') {
+            throw new Error('set_cursor requires event_id (number)');
+          }
+          setCursor('agent', viewerId, eventId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ ok: true }, null, 2) }]
+          };
+        }
+
+        case 'counts': {
+          const viewerId = typeof safeArgs.viewer_id === 'string' ? safeArgs.viewer_id : 'default';
+          const result = getCountsSince('agent', viewerId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
+          };
+        }
+
+        case 'react': {
+          const nuggetId = safeArgs.nugget_id as number;
+          const reaction = safeArgs.reaction as string;
+          if (typeof nuggetId !== 'number') {
+            throw new Error('react requires nugget_id (number)');
+          }
+          if (!reaction || !REACTIONS.includes(reaction as Reaction)) {
+            throw new Error(`react requires reaction: one of ${REACTIONS.join(', ')}`);
+          }
+          const nugget = reactNugget(nuggetId, reaction as Reaction);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(nugget, null, 2) }]
+          };
+        }
+
+        case 'mark_applied': {
+          const nuggetId = safeArgs.nugget_id as number;
+          if (typeof nuggetId !== 'number') {
+            throw new Error('mark_applied requires nugget_id (number)');
+          }
+          const nugget = markNuggetApplied(nuggetId);
+          return {
+            content: [{ type: 'text', text: JSON.stringify(nugget, null, 2) }]
+          };
+        }
+
+        case 'view': {
+          const name = safeArgs.name as string;
+          if (!name || typeof name !== 'string') {
+            throw new Error('view requires name (string)');
+          }
+          if (name !== 'feed') {
+            throw new Error(`Unknown view: ${name}`);
+          }
+          const limit = typeof safeArgs.limit === 'number' ? safeArgs.limit : undefined;
+          const results = getFeed({ limit });
           return {
             content: [{ type: 'text', text: JSON.stringify(results, null, 2) }]
           };
