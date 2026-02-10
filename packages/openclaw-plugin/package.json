@@ -1,14 +1,21 @@
 {
   "name": "@true-and-useful/watercooler-openclaw",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "OpenClaw plugin for Watercooler - knowledge and nuggets via MCP",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "openclaw": {
-    "extensions": ["./dist/index.js"]
+    "extensions": [
+      "./dist/index.js"
+    ]
   },
-  "files": ["dist", "openclaw.plugin.json", "skills", "README.md"],
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "skills",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
@@ -22,7 +29,15 @@
     "@types/node": "^20.10.0",
     "typescript": "^5.3.3"
   },
-  "keywords": ["openclaw", "plugin", "watercooler", "knowledge", "mcp", "nuggets", "agents"],
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "watercooler",
+    "knowledge",
+    "mcp",
+    "nuggets",
+    "agents"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/rsdouglas/watercooler.git",
@@ -30,5 +45,7 @@
   },
   "author": "True and Useful LLC",
   "license": "MIT",
-  "engines": { "node": ">=18.0.0" }
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
